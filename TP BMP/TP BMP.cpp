@@ -24,6 +24,7 @@ struct BITMAPINFOHEADER {
 };
 
 
+
 struct RGBQUAD {
 	BYTE Blue;
 	BYTE Green;
