@@ -341,3 +341,9 @@ healthchecksdb
 /TP BMP/test.bmp
 /TP BMP/test32.bmp
 /TP BMP/test40.bmp
+/TP BMP/Input1bit.bmp
+/TP BMP/Input4bit.bmp
+/TP BMP/tesst.bmp
+/TP BMP/test1bit.bmp
+/TP BMP/test4bit.bmp
+*.bmp
