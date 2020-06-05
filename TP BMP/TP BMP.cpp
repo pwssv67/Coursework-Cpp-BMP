@@ -5,47 +5,14 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
-/*
-#pragma pack (push,1)
-struct BITMAPFILEHEADER {
-	WORD    Type;     // ‘BM’ 0x4D42   
-	DWORD   Size;     // Размер файла в байтах, BitCount*Height*Width+ OffsetBits   
-	WORD    Reserved1;    // Зарезервирован; должен быть нуль  
-	WORD    Reserved2;    // Зарезервирован; должен быть нуль  
-	DWORD   OffsetBits;   // Смещение данных от начала файла в байтах // = sizeof(BITMAPFILEHEADER)+sizeof(BITMAPINFOHEADER) 
-};
-#pragma pack(pop)
 
-struct BITMAPINFOHEADER {
-	DWORD   Size;           // Число байтов необходимое для структуры = 40  
-	DWORD   Width;          // Ширина точечного рисунка в пикселях   
-	DWORD   Height;         // Высота точечного рисунка в пикселях   
-	WORD    Planes;         // Число плоскостей целевого устройства = 1 
-	WORD    BitCount;       // Глубина цвета, число бит на точку = 0,1,4,8,16,24,32   
-	DWORD   Compression;    // Тип сжатия = 0 для несжатого изображения   
-	DWORD   SizeImage;      // Размер изображения в байтах BitCount*Height*Width  
-	DWORD   XPelsPerMeter;  // Разрешающая способность по горизонтали  
-	DWORD   YPelsPerMeter;  // Разрешающая способность по вертикали  
-	DWORD   ColorUsed;      // Число индексов используемых цветов. Если все цвета = 0  
-	DWORD   ColorImportant; // Число необходимых цветов = 0
-};
-
-
-struct RGBQUAD {
-	BYTE Blue;
-	BYTE Green;
-	BYTE Red;
-	BYTE Reserved;
-};
-
-*/
 class Image {
 	std::vector <RGBQUAD> Rgbquad;
 	std::vector <RGBQUAD> palette;
 	BITMAPINFOHEADER BMInfoHeader;
 	
 public:
-	Image(char Mode, WORD BCount, int Width, int Height) {
+	Image(char Mode, WORD BCount, long int Width,long int Height) {
 		BMInfoHeader.biBitCount = BCount;
 		BMInfoHeader.biSize = 40;
 		BMInfoHeader.biHeight = Height;
@@ -65,14 +32,15 @@ public:
 				palette[0].rgbRed = palette[0].rgbGreen = palette[0].rgbBlue = 0x0F;
 				palette[0].rgbReserved = palette[0].rgbReserved = 0;
 				palette[1].rgbRed = palette[1].rgbGreen = palette[1].rgbBlue = 0xFF;
-				BMInfoHeader.biSizeImage = ceil((int)Width * (int)Height / 8.0);
+				BMInfoHeader.biSizeImage = ceil((Width * Height) / 8.0);
 				break;
 			case 4:
 				for (int i = 0; i < BMInfoHeader.biClrUsed; i++) {
 					palette[i].rgbRed = palette[i].rgbGreen = palette[i].rgbBlue = 17 * (i);
 					palette[i].rgbReserved = 0;
 				}
-				BMInfoHeader.biSizeImage = ceil((int)Width * Height / 2.0);
+				BMInfoHeader.biSizeImage = BMInfoHeader.biWidth * BMInfoHeader.biHeight / 2.0;
+				break;
 			}
 		}
 
@@ -103,9 +71,9 @@ public:
 			Rgbquad = std::vector <RGBQUAD>(BMInfoHeader.biHeight * BMInfoHeader.biWidth);
 
 			for (int i = 0; i < BMInfoHeader.biHeight * BMInfoHeader.biWidth; i++) {
-				Rgbquad[i].rgbBlue = 15;
-				Rgbquad[i].rgbGreen = Mode / 16;
-				Rgbquad[i].rgbRed = Mode / 16;
+				Rgbquad[i].rgbBlue = Mode;
+				Rgbquad[i].rgbGreen = Mode ;
+				Rgbquad[i].rgbRed = Mode ;
 				Rgbquad[i].rgbReserved = 0;
 			}
 			break;
@@ -113,9 +81,9 @@ public:
 			Rgbquad = std::vector <RGBQUAD>(BMInfoHeader.biHeight * BMInfoHeader.biWidth);
 
 			for (int i = 0; i < BMInfoHeader.biHeight * BMInfoHeader.biWidth; i++) {
-				Rgbquad[i].rgbBlue = 1;
-				Rgbquad[i].rgbGreen = Mode / 127;
-				Rgbquad[i].rgbRed = Mode / 127;
+				Rgbquad[i].rgbBlue = Mode;
+				Rgbquad[i].rgbGreen = Mode ;
+				Rgbquad[i].rgbRed = Mode ;
 				Rgbquad[i].rgbReserved = 0;
 			}
 			break;
@@ -131,6 +99,7 @@ public:
 	Image(const Image &i) {
 		BMInfoHeader = i.BMInfoHeader;
 		Rgbquad = i.Rgbquad;
+		palette = i.palette;
 	}
 
 	int loadimage(const char* fileName) {
@@ -211,7 +180,7 @@ public:
 		BMFileHeader.bfReserved1 = 0;
 		BMFileHeader.bfReserved2 = 0;
 		BMFileHeader.bfType = 0x4D42;
-		BMFileHeader.bfSize = BMInfoHeader.biSizeImage + BMFileHeader.bfOffBits;
+		BMFileHeader.bfSize = BMInfoHeader.biSizeImage + BMFileHeader.bfOffBits-1;
 		BMFileHeader.bfSize += 4 - BMFileHeader.bfSize % 4;
 		//BMInfoHeader.biSizeImage += 2;
 		f2 = fopen(filename, "wb");
@@ -225,6 +194,7 @@ public:
 		fseek(f2, BMFileHeader.bfOffBits, SEEK_SET);
 		int empty = 0;
 		int buffer = 0;
+		int temp;
 		switch (BMInfoHeader.biBitCount) {
 		case 32:
 			for (int i = 0; i < BMInfoHeader.biHeight * BMInfoHeader.biWidth; i++) {
@@ -249,8 +219,9 @@ public:
 		case 4:
 			buffer = 0;
 			for (int i = 0; i < BMInfoHeader.biHeight * BMInfoHeader.biWidth; i++) {
+				temp = i;
 				buffer = buffer << 4;
-				buffer += Rgbquad[i].rgbBlue/16;
+				buffer += (int)(Rgbquad[i].rgbBlue/16);
 				if (i % 2 == 1) {
 					fwrite(&buffer, 1, 1, f2);
 					buffer = 0;
@@ -259,6 +230,9 @@ public:
 			if (buffer != 0) {
 				buffer = buffer << 4;
 				fwrite(&buffer, 1, 1, f2);
+			}
+			for (int i = 0; i <2; i++) {
+				fwrite(&empty, 1, 1, f2);
 			}
 			break;
 		case 1:
@@ -287,6 +261,7 @@ public:
 	Image operator = (Image Inp) {
 		BMInfoHeader = Inp.BMInfoHeader;
 		Rgbquad = Inp.Rgbquad;
+		palette = Inp.palette;
 		return *this;
 	}
 	
@@ -313,7 +288,7 @@ public:
 		height_bigger? counter_height_temp = counter_height :counter_height_temp = 0;
 		float counter_width_temp = 0;
 		int source_i = 0;
-		int source_j = 0;   //TODO ибо всрато!
+		int source_j = 0;   //заработало!
 		for (int i = 0; i < height; i++) {
 			source_j = 0;
 			width_bigger ? counter_width_temp = counter_width : counter_width_temp = 0;
@@ -421,8 +396,8 @@ public:
 			}
 		}
 		else {
-			this->BMInfoHeader.biClrUsed = 0;
-
+			BMInfoHeader.biClrUsed = 0;
+			//BMInfoHeader.biSizeImage = BMInfoHeader.biHeight * BMInfoHeader.biWidth * Depth / 8;
 			palette.clear();
 		}
 		return *this;
@@ -434,9 +409,17 @@ int main(){
 	//Image->loadimage("test.bmp");
 
 	Image img("test32.bmp");
-	Image img2 = Image('b', 32, 300, 400);
-	img2 /= img/1; 
-	img2.writeimage("test_write.bmp");
+	img.writeimage("test32_write.bmp");
+	Image img2 = Image('b', 32, 64,64);
+	img2 /= img; 
+	img2.writeimage("testrescale32.bmp");
+	img2 = img2 / 1;
+	img2.writeimage("test_write1bit.bmp");
+	img = img / 4;
+	img.writeimage("test_write4bit.bmp");
+	Image img3 = Image("test_write4bit.bmp");
+	img3 = img3 / 32;
+	img3.writeimage("test4to32bit.bmp");
 	//Image img(char(255), 4, 64, 64);
 	//Image img("input1bit.bmp");
 	//img.writeimage("test1bit.bmp");
