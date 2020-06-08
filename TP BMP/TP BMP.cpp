@@ -349,6 +349,7 @@ public:
 				else {
 					source_i = InpImage.BMInfoHeader.biHeight - 1;
 				}
+
 				if (counter_height_temp > 1) {
 					if (counter_height > 1) {
 						counter_height_temp -= int(counter_height_temp);
