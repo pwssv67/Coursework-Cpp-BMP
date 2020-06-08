@@ -8,7 +8,7 @@
 
 class Image {
 	std::vector <std::vector <RGBQUAD>> Rgbquad;
-	std::vector <RGBQUAD> palette;
+	std::vector <RGBQUAD> Palette;
 	BITMAPINFOHEADER BMInfoHeader;
 	
 public:
@@ -23,23 +23,23 @@ public:
 		BMInfoHeader.biClrUsed = 0;
 		BMInfoHeader.biCompression = 0;
 		BMInfoHeader.biPlanes = 1;
-		BMInfoHeader.biXPelsPerMeter = 200;
-		BMInfoHeader.biYPelsPerMeter = 200;
+		BMInfoHeader.biXPelsPerMeter = 2000;
+		BMInfoHeader.biYPelsPerMeter = 2000;
 		//palette
 		if (BCount <= 8) {
 			BMInfoHeader.biClrUsed = (int)pow(2, BMInfoHeader.biBitCount);
-			palette = std::vector <RGBQUAD>((int)pow(2, BMInfoHeader.biBitCount));
+			Palette = std::vector <RGBQUAD>((int)pow(2, BMInfoHeader.biBitCount));
 			switch (BCount) {
 			case 1:
-				palette[0].rgbRed = palette[0].rgbGreen = palette[0].rgbBlue = 0x0F;
-				palette[0].rgbReserved = palette[0].rgbReserved = 0;
-				palette[1].rgbRed = palette[1].rgbGreen = palette[1].rgbBlue = 0xFF;
+				Palette[0].rgbRed = Palette[0].rgbGreen = Palette[0].rgbBlue = 0x0F;
+				Palette[0].rgbReserved = Palette[0].rgbReserved = 0;
+				Palette[1].rgbRed = Palette[1].rgbGreen = Palette[1].rgbBlue = 0xFF;
 				BMInfoHeader.biSizeImage = ceil((Width * Height) / 8.0);
 				break;
 			case 4:
 				for (int i = 0; i < BMInfoHeader.biClrUsed; i++) {
-					palette[i].rgbRed = palette[i].rgbGreen = palette[i].rgbBlue = 17 * (i);
-					palette[i].rgbReserved = 0;
+					Palette[i].rgbRed = Palette[i].rgbGreen = Palette[i].rgbBlue = 17 * (i);
+					Palette[i].rgbReserved = 0;
 				}
 				BMInfoHeader.biSizeImage = BMInfoHeader.biWidth * BMInfoHeader.biHeight / 2.0;
 				break;
@@ -90,7 +90,7 @@ public:
 	Image(const Image &i) {
 		BMInfoHeader = i.BMInfoHeader;
 		Rgbquad = i.Rgbquad;
-		palette = i.palette;
+		Palette = i.Palette;
 	}
 
 	int loadimage(const char* fileName) {
@@ -141,36 +141,36 @@ public:
 			break;
 
 		case 4:
-			palette = std::vector <RGBQUAD>((int)pow(2, BMInfoHeader.biBitCount));
+			Palette = std::vector <RGBQUAD>((int)pow(2, BMInfoHeader.biBitCount));
 			for (int i = 0; i < (int)pow(2, BMInfoHeader.biBitCount); i++) {
-				palette[i].rgbRed = palette[i].rgbGreen = palette[i].rgbBlue = 17 * (i);
-				palette[i].rgbReserved = 0;
+				Palette[i].rgbRed = Palette[i].rgbGreen = Palette[i].rgbBlue = 17 * (i);
+				Palette[i].rgbReserved = 0;
 			}
 
 			for (int i = 0; i < BMInfoHeader.biHeight; i++) {
 				for (int j = 0; j < BMInfoHeader.biWidth; j++) {
 					if ((i*BMInfoHeader.biWidth + j) % 2 == 0) {
 						fread(&buffer, 1, 1, f);
-						Rgbquad[i][j] = palette[(buffer >> 4) & 0b1111];
+						Rgbquad[i][j] = Palette[(buffer >> 4) & 0b1111];
 					}
 					else {
-						Rgbquad[i][j] = palette[(buffer) & 0b1111];
+						Rgbquad[i][j] = Palette[(buffer) & 0b1111];
 					}
 				}
 			}
 			break;
 		case 1:
-			palette = std::vector <RGBQUAD>(2);
-			palette[0].rgbRed = palette[0].rgbGreen = palette[0].rgbBlue = 0x0F;
-			palette[0].rgbReserved = palette[0].rgbReserved = 0;
-			palette[1].rgbRed = palette[1].rgbGreen = palette[1].rgbBlue = 0xFF;
+			Palette = std::vector <RGBQUAD>(2);
+			Palette[0].rgbRed = Palette[0].rgbGreen = Palette[0].rgbBlue = 0x0F;
+			Palette[0].rgbReserved = Palette[0].rgbReserved = 0;
+			Palette[1].rgbRed = Palette[1].rgbGreen = Palette[1].rgbBlue = 0xFF;
 			buffer = 0;
 			for (int i = 0; i < BMInfoHeader.biHeight * BMInfoHeader.biWidth; i++) {
 				for (int j = 0; j < BMInfoHeader.biWidth; j++) {
 					if ((i * BMInfoHeader.biWidth +j) % 8 == 0) {
 						fread(&buffer, 1, 1, f);
 					}
-					Rgbquad[i][j] = palette[(buffer >> (7 - (i * BMInfoHeader.biWidth + j) % 8)) & 0b1];
+					Rgbquad[i][j] = Palette[(buffer >> (7 - (i * BMInfoHeader.biWidth + j) % 8)) & 0b1];
 				}
 			}
 		}
@@ -192,14 +192,13 @@ public:
 		BMFileHeader.bfType = 0x4D42;
 		BMFileHeader.bfSize = BMInfoHeader.biSizeImage + BMFileHeader.bfOffBits;
 		BMFileHeader.bfSize += 4 - BMFileHeader.bfSize % 4;
-		//BMInfoHeader.biSizeImage += 2;
 		f2 = fopen(filename, "wb");
 		fwrite(&BMFileHeader, sizeof(BITMAPFILEHEADER), 1, f2);
 		fwrite(&BMInfoHeader, sizeof(BITMAPINFOHEADER), 1, f2);
 
 		if (BMInfoHeader.biBitCount <= 8) {
-			for (int i = 0; i < palette.size(); i++) {
-				fwrite(&palette[i], sizeof(RGBQUAD), 1, f2);
+			for (int i = 0; i < Palette.size(); i++) {
+				fwrite(&Palette[i], sizeof(RGBQUAD), 1, f2);
 			}
 		}
 
@@ -279,9 +278,6 @@ public:
 				fwrite(&buffer, 1, 1, f2);
 			}
 
-			//for (int i = 0; i < temp; i++) {
-			//	fwrite(&empty, 1, 1, f2);
-			//}
 			break;
 		}
 	}
@@ -289,7 +285,7 @@ public:
 	Image operator = (Image Inp) {
 		BMInfoHeader = Inp.BMInfoHeader;
 		Rgbquad = Inp.Rgbquad;
-		palette = Inp.palette;
+		Palette = Inp.Palette;
 		return *this;
 	}
 	
@@ -308,35 +304,33 @@ public:
 				img.Rgbquad[i] = std::vector <RGBQUAD>(BMInfoHeader.biWidth);
 			}
 		}
-		int height = img.BMInfoHeader.biHeight;
+		int height = img.BMInfoHeader.biHeight;       
 		int width = img.BMInfoHeader.biWidth;
 		bool height_bigger;
 		bool width_bigger;
 		img.BMInfoHeader.biHeight > InpImage.BMInfoHeader.biHeight ? height_bigger = true : height_bigger = false;
 		img.BMInfoHeader.biWidth > InpImage.BMInfoHeader.biWidth ? width_bigger = true : width_bigger = false;
 
-		float counter_width = abs((InpImage.BMInfoHeader.biWidth - width)/ (float)BMInfoHeader.biWidth);
-		float counter_height = abs((InpImage.BMInfoHeader.biHeight - height) / (float)BMInfoHeader.biHeight);
+		float width_quotient = abs((InpImage.BMInfoHeader.biWidth - width)/ (float)BMInfoHeader.biWidth);
+		float height_quotient = abs((InpImage.BMInfoHeader.biHeight - height) / (float)BMInfoHeader.biHeight);
 
-		float counter_height_temp;
-		height_bigger ? counter_height_temp = counter_height : counter_height_temp = 0;
-		float counter_width_temp = 0;
+		float height_q_temp;
+		height_bigger ? height_q_temp = height_quotient : height_q_temp = 0;
+		float width_q_temp = 0;
 		int source_i = 0;
-		int source_j = 0;   //заработало!
+		int source_j = 0;   
 
 		for (int i = 0; i < height; i++) {
 			source_j = 0;
-			width_bigger ? counter_width_temp = counter_width : counter_width_temp = 0;
+			width_bigger ? width_q_temp = width_quotient : width_q_temp = 0;
 			for (int j = 0; j < width; j++) {
 				img.Rgbquad[i][j] = InpImage.Rgbquad[source_i][source_j];
-				counter_width_temp += counter_width;
-				//if (i<1)
-				//	std::cout<<j <<"-" <<counter_width_temp<< "-"<< source_j << "|";
+				width_q_temp += width_quotient;
 				if (width_bigger) {
-					if (counter_width_temp > 1) {
-						counter_width_temp--;
-						if (counter_width > 1) {
-							counter_width_temp -= int(counter_width);
+					if (width_q_temp > 1) {
+						width_q_temp--;
+						if (width_quotient > 1) {
+							width_q_temp -= int(width_quotient);
 						}        
 					}
 					else {
@@ -346,29 +340,29 @@ public:
 					}
 				} 
 				else {
-					if (source_j + 1 + int(counter_width_temp) <= InpImage.BMInfoHeader.biWidth - 1) {
-						source_j += 1 + int(counter_width_temp);
+					if (source_j + 1 + int(width_q_temp) <= InpImage.BMInfoHeader.biWidth - 1) {
+						source_j += 1 + int(width_q_temp);
 					}
 					else {
 						source_j = InpImage.BMInfoHeader.biWidth - 1;
 					}
-					if (counter_width_temp > 1) {
-						if (counter_width > 1) {
-							counter_width_temp -= int(counter_width_temp);
+					if (width_q_temp > 1) {
+						if (width_quotient > 1) {
+							width_q_temp -= int(width_q_temp);
 						}
 						else {
-							counter_width_temp -= 1.001;
+							width_q_temp -= 1.001;
 						}
 					}
 				}
 			}
-			counter_height_temp += counter_height;
+			height_q_temp += height_quotient;
 
 			if (height_bigger) {
-				if (counter_height_temp > 1) {
-					counter_height_temp--;
-					if (counter_height >= 1) {
-						counter_height_temp -= int(counter_height);
+				if (height_q_temp > 1) {
+					height_q_temp--;
+					if (height_quotient >= 1) {
+						height_q_temp -= int(height_quotient);
 					}
 				}
 				else {
@@ -378,18 +372,18 @@ public:
 				}
 			}
 			else {
-				if (source_i + 1 + int(counter_height_temp) <= InpImage.BMInfoHeader.biHeight - 1) {
-					source_i += 1 + int(counter_height_temp);
+				if (source_i + 1 + int(height_q_temp) <= InpImage.BMInfoHeader.biHeight - 1) {
+					source_i += 1 + int(height_q_temp);
 				}
 				else {
 					source_i = InpImage.BMInfoHeader.biHeight - 1;
 				}
-				if (counter_height_temp > 1) {
-					if (counter_height > 1) {
-						counter_height_temp -= int(counter_height_temp);
+				if (height_q_temp > 1) {
+					if (height_quotient > 1) {
+						height_q_temp -= int(height_q_temp);
 					}
 					else {
-						counter_height_temp -= 1.01;
+						height_q_temp -= 1.01;
 					}
 				}
 			}	
@@ -399,26 +393,25 @@ public:
 	}
 
 	Image operator / (short Depth) {
-		//int oldBitCount = this->BMInfoHeader.biBitCount;
-		this->BMInfoHeader.biBitCount = Depth;
+		BMInfoHeader.biBitCount = Depth;
 
 		if (Depth <= 8) {
-			this->BMInfoHeader.biClrUsed = (int)pow(2, BMInfoHeader.biBitCount);
-			this->palette = std::vector <RGBQUAD>((int)pow(2, BMInfoHeader.biBitCount));
+			BMInfoHeader.biClrUsed = (int)pow(2, BMInfoHeader.biBitCount);
+			Palette = std::vector <RGBQUAD>((int)pow(2, BMInfoHeader.biBitCount));
 
 			switch (Depth) {
 			case 1:
-				this->palette[0].rgbRed = this->palette[0].rgbGreen = this->palette[0].rgbBlue = 0x0F;
-				this->palette[0].rgbReserved = this->palette[0].rgbReserved = 0;
-				this->palette[1].rgbRed = this->palette[1].rgbGreen = this->palette[1].rgbBlue = 0xFF;
-				this->BMInfoHeader.biSizeImage = ceil((int)this->BMInfoHeader.biWidth * (int)this->BMInfoHeader.biHeight / 8.0);
+				Palette[0].rgbRed = Palette[0].rgbGreen = Palette[0].rgbBlue = 0x0F;
+				Palette[0].rgbReserved = Palette[0].rgbReserved = 0;
+				Palette[1].rgbRed = Palette[1].rgbGreen = Palette[1].rgbBlue = 0xFF;
+				BMInfoHeader.biSizeImage = ceil((int)BMInfoHeader.biWidth * (int)BMInfoHeader.biHeight / 8.0);
 				break;
 			case 4:
-				for (int i = 0; i < this->BMInfoHeader.biClrUsed; i++) {
-					this->palette[i].rgbRed = this->palette[i].rgbGreen = this->palette[i].rgbBlue = 17 * (i);
-					this->palette[i].rgbReserved = 0;
+				for (int i = 0; i < BMInfoHeader.biClrUsed; i++) {
+					Palette[i].rgbRed = Palette[i].rgbGreen = Palette[i].rgbBlue = 17 * (i);
+					Palette[i].rgbReserved = 0;
 				}
-				this->BMInfoHeader.biSizeImage = ceil((int)this->BMInfoHeader.biWidth * this->BMInfoHeader.biHeight / 2.0);
+				BMInfoHeader.biSizeImage = ceil((int)BMInfoHeader.biWidth * BMInfoHeader.biHeight / 2.0);
 			}
 
 			int color = 0;
@@ -428,10 +421,10 @@ public:
 					color >= 256 ? color = 255 : color;
 
 					if (Depth == 1) {
-						Rgbquad[i][j] = palette[color / 128];
+						Rgbquad[i][j] = Palette[color / 128];
 					}
 					else {
-						Rgbquad[i][j] = palette[color / 16];
+						Rgbquad[i][j] = Palette[color / 16];
 					}
 				}
 			}
@@ -440,19 +433,18 @@ public:
 		else {
 			BMInfoHeader.biClrUsed = 0;
 			BMInfoHeader.biSizeImage = BMInfoHeader.biHeight * BMInfoHeader.biWidth * Depth / 8;
-			palette.clear();
+			Palette.clear();
 		}
 
 		return *this;
 	}
 
-};
+}; 
 
 int main(){
-	//Image->loadimage("test.bmp");
-
 	Image img("test32.bmp");
 	img.writeimage("test32_write.bmp");
+	Image img4 = img;
 	Image img2 = Image('b', 32, 64,64);
 	img2 /= img; 
 	img2.writeimage("testrescale32.bmp");
@@ -463,7 +455,10 @@ int main(){
 	Image img3 = Image("test_write4bit.bmp");
 	img3 = img3 / 32;
 	img3.writeimage("test4to32bit.bmp");
-	//Image img(char(255), 4, 64, 64);
-	//Image img("input1bit.bmp");
-	//img.writeimage("test1bit.bmp");
+	img2 = Image('b', 32, 300, 200);
+	img2 /= img4;
+	img2.writeimage("testrescale32_2.bmp");
+	img4 = Image('b', 32, 600, 900);
+	img4 /= img2;
+	img4.writeimage("testrescale down-and-up.bmp");
 }
